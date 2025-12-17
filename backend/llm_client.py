@@ -203,7 +203,9 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
 
   # SiliconFlow 在生成 100 年 K 线 + 全量分析时，响应时间可能超过 1 分钟，
   # 将超时时间适当调大，避免正常请求被过早中断。
-  timeout = httpx.Timeout(120.0, connect=20.0, read=100.0, write=20.0)
+  # Allow long-running generations for the full 100 年 K 线 + 文本分析。
+  # 连接和写入相对较短，只把整体读取窗口放宽到 4 分钟。
+  timeout = httpx.Timeout(240.0, connect=20.0, read=220.0, write=20.0)
 
   with httpx.Client(timeout=timeout) as client:
     resp = client.post(api_base, headers=headers, json=payload)
