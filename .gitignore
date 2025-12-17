@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 reference/
+backend/local-config.json
+backend.db
