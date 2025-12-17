@@ -106,69 +106,156 @@ export const ResultPage: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: "100vh", padding: 16, maxWidth: 1024, margin: "0 auto" }}>
-      <header style={{ marginBottom: 24, textAlign: "center" }}>
-        <h1 style={{ fontSize: 24, marginBottom: 8 }}>人生牛市 · 分析结果</h1>
-        <p style={{ fontSize: 13, color: "#555" }}>结合八字命理与 AI 推演，为你绘制 100 年人生 K 线。</p>
-      </header>
-
-      {error && <p style={{ color: "red", marginBottom: 16 }}>{error}</p>}
-
-      {!analysis && !error && <p>加载中...</p>}
-
-      {analysis && analysis.status === "pending" && (
-        <div style={{ marginBottom: 24 }}>
-          <p>大师推演中（约 3–5 分钟），请稍候...</p>
-        </div>
-      )}
-
-      {analysis && analysis.status === "error" && (
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ color: "red" }}>分析失败：{analysis.error_message}</p>
-        </div>
-      )}
-
-      {lifeResult && (
-        <>
-          <section style={{ marginBottom: 32 }}>
-            <AnalysisResult analysis={lifeResult.analysis} />
-          </section>
-
-          <section style={{ marginBottom: 32 }}>
-            <LifeKLineChart data={lifeResult.chartData} />
-          </section>
-        </>
-      )}
-
-      <section style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 8 }}>邀请好友，获得更多测算次数</h2>
-        {inviteInfo && (
-          <div
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f9fafb",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      <main
+        style={{
+          flex: 1,
+          padding: "24px 16px 32px",
+          maxWidth: 1024,
+          margin: "0 auto",
+          width: "100%"
+        }}
+      >
+        <header style={{ marginBottom: 24, textAlign: "center" }}>
+          <h1
             style={{
-              borderRadius: 12,
-              border: "1px solid #eee",
-              padding: 12,
-              background: "#faf5ff"
+              fontSize: 24,
+              marginBottom: 8,
+              color: "#1f2937"
             }}
           >
-            <p style={{ marginBottom: 4 }}>
-              今日剩余次数：{inviteInfo.todayRemaining}（基础 {inviteInfo.todayBaseQuota} 次 / 推广{" "}
-              {inviteInfo.todayExtraQuota} 次）
-            </p>
-            <p style={{ marginBottom: 4 }}>
-              累计推荐：{inviteInfo.totalInvited} 人，今日获得：{inviteInfo.invitedToday} 人
-            </p>
-            <p style={{ marginBottom: 4, fontSize: 12, color: "#555" }}>
-              规则：分享链接给朋友，每有 1 人完成测算，你就获得 +1 次机会。每天最多获得 10 次。
-            </p>
-            <p style={{ marginBottom: 4, wordBreak: "break-all", fontSize: 12 }}>
-              我的专属推广链接：{inviteInfo.myReferralUrl}
-            </p>
+            人生牛市 · 分析结果
+          </h1>
+          <p
+            style={{
+              fontSize: 13,
+              color: "#4b5563"
+            }}
+          >
+            结合八字命理与 AI 推演，为你绘制 100 年人生 K 线。
+          </p>
+        </header>
+
+        {error && <p style={{ color: "red", marginBottom: 16 }}>{error}</p>}
+
+        {!analysis && !error && <p>加载中...</p>}
+
+        {analysis && analysis.status === "pending" && (
+          <div style={{ marginBottom: 24 }}>
+            <p>大师推演中（约 3–5 分钟），请稍候...</p>
           </div>
         )}
-      </section>
 
-      <footer style={{ fontSize: 11, color: "#999", textAlign: "center", paddingBottom: 16 }}>
+        {analysis && analysis.status === "error" && (
+          <div style={{ marginBottom: 24 }}>
+            <p style={{ color: "red" }}>分析失败：{analysis.error_message}</p>
+          </div>
+        )}
+
+        {lifeResult && (
+          <>
+            <section
+              style={{
+                marginBottom: 32,
+                background: "#ffffff",
+                borderRadius: 16,
+                border: "1px solid #f3f4f6",
+                padding: 16,
+                boxShadow:
+                  "0px 20px 25px -5px rgba(0,0,0,0.05), 0px 8px 10px -6px rgba(0,0,0,0.05)"
+              }}
+            >
+              <AnalysisResult analysis={lifeResult.analysis} />
+            </section>
+
+            <section
+              style={{
+                marginBottom: 32,
+                background: "#ffffff",
+                borderRadius: 16,
+                border: "1px solid #f3f4f6",
+                padding: 16,
+                boxShadow:
+                  "0px 20px 25px -5px rgba(0,0,0,0.05), 0px 8px 10px -6px rgba(0,0,0,0.05)"
+              }}
+            >
+              <LifeKLineChart data={lifeResult.chartData} />
+            </section>
+          </>
+        )}
+
+        <section style={{ marginBottom: 24 }}>
+          <h2
+            style={{
+              fontSize: 18,
+              marginBottom: 8,
+              color: "#1f2937"
+            }}
+          >
+            邀请好友，获得更多测算次数
+          </h2>
+          {inviteInfo && (
+            <div
+              style={{
+                background:
+                  "linear-gradient(135deg, rgba(250,245,255,1) 0%, rgba(253,242,248,1) 100%)",
+                borderRadius: 12,
+                border: "1px solid #e9d5ff",
+                padding: 16,
+                boxShadow: "0px 1px 2px rgba(0,0,0,0.05)"
+              }}
+            >
+              <p style={{ marginBottom: 4, fontSize: 13, color: "#4b5563" }}>
+                今日剩余：{inviteInfo.todayRemaining} 次（基础 {inviteInfo.todayBaseQuota} 次 / 推广{" "}
+                {inviteInfo.todayExtraQuota} 次）
+              </p>
+              <p style={{ marginBottom: 4, fontSize: 13, color: "#4b5563" }}>
+                累计推荐：{inviteInfo.totalInvited} 人，今日获得：{inviteInfo.invitedToday} 人
+              </p>
+              <p
+                style={{
+                  marginBottom: 4,
+                  fontSize: 12,
+                  color: "#555"
+                }}
+              >
+                规则：分享链接给朋友，每有 1 人完成测算，你就获得 +1 次机会。每天最多获得 10 次。
+              </p>
+              <div
+                style={{
+                  marginTop: 8,
+                  padding: 8,
+                  borderRadius: 8,
+                  border: "1px solid #e9d5ff",
+                  background: "#ffffff",
+                  fontSize: 12,
+                  color: "#6b7280",
+                  wordBreak: "break-all"
+                }}
+              >
+                {inviteInfo.myReferralUrl}
+              </div>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer
+        style={{
+          padding: 16,
+          fontSize: 11,
+          color: "#9ca3af",
+          textAlign: "center",
+          background: "#111827"
+        }}
+      >
         © 2025 人生牛市 | 仅供娱乐，请勿迷信
       </footer>
     </div>

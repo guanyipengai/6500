@@ -59,84 +59,290 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* 上半部分参考 first 页：品牌 + 邀请码提示 */}
-      <div style={{ padding: 16, flex: "0 0 auto" }}>
-        <header style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 24, marginBottom: 4 }}>人生牛市</h1>
-          <p style={{ fontSize: 12, color: "#666" }}>Life&apos;s bull market</p>
-        </header>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#f9fafb",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      <header
+        style={{
+          background: "#ffffff",
+          padding: "16px 0",
+          borderBottom: "1px solid #e5e7eb"
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 420,
+            margin: "0 auto",
+            padding: "0 16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 999,
+                background:
+                  "linear-gradient(135deg, rgba(250,245,255,1) 0%, rgba(253,242,248,1) 100%)",
+                border: "1px solid #e5e7eb"
+              }}
+            />
+            <div>
+              <div
+                style={{
+                  fontSize: 18,
+                  lineHeight: "24px",
+                  color: "#111827"
+                }}
+              >
+                人生牛市
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  lineHeight: "16px",
+                  color: "#6b7280"
+                }}
+              >
+                Life&apos;s bull market
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
 
-        <section style={{ marginBottom: 16 }}>
-          <h2 style={{ fontSize: 20, marginBottom: 4 }}>八字排盘</h2>
-          <p style={{ fontSize: 13, color: "#666" }}>
-            填写邀请码并使用手机号登录，开启你的人生牛市。
+      <main
+        style={{
+          flex: 1,
+          padding: "24px 16px 32px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 24
+        }}
+      >
+        <section
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            maxWidth: 320
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 8,
+              color: "#ff3164",
+              fontSize: 28,
+              lineHeight: "34px"
+            }}
+          >
+            洞见人生牛市
+          </div>
+          <div
+            style={{
+              marginBottom: 8,
+              color: "#111827",
+              fontSize: 20,
+              lineHeight: "26px"
+            }}
+          >
+            命运有其波动
+          </div>
+          <p
+            style={{
+              color: "#4b5563",
+              fontSize: 14,
+              lineHeight: "20px"
+            }}
+          >
+            以易经观变，以数据成形，让百年人生显现为一条折线。
+            <br />
+            看见起伏 · 理解节奏 · 把握转折。
           </p>
         </section>
-      </div>
 
-      {/* 登录表单区域 */}
-      <div style={{ padding: 16, flex: "1 1 auto", maxWidth: 440, margin: "0 auto", width: "100%" }}>
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <label>
-            邀请码（可选）
-            <input
-              type="text"
-              value={inviterCode}
-              onChange={e => setInviterCode(e.target.value)}
-              placeholder="请输入邀请码"
-              style={{ width: "100%", padding: 8, marginTop: 4 }}
-            />
-          </label>
+        <section
+          style={{
+            width: "100%",
+            maxWidth: 360
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              border: "1px solid #f3f4f6",
+              padding: 24,
+              boxShadow:
+                "0px 20px 25px -5px rgba(0,0,0,0.1), 0px 8px 10px -6px rgba(0,0,0,0.1)"
+            }}
+          >
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <h2
+                style={{
+                  fontSize: 22,
+                  lineHeight: "28px",
+                  marginBottom: 4,
+                  color: "#1f2937"
+                }}
+              >
+                八字排盘登录
+              </h2>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#6b7280"
+                }}
+              >
+                填写邀请码并使用手机号登录，开启你的人生牛市。
+              </p>
+            </div>
 
-          <label>
-            手机号
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              required
-              style={{ width: "100%", padding: 8, marginTop: 4 }}
-            />
-          </label>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <label style={{ flex: 1 }}>
-              验证码
-              <input
-                type="text"
-                value={code}
-                onChange={e => setCode(e.target.value)}
-                required
-                style={{ width: "100%", padding: 8, marginTop: 4 }}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleSendCode}
-              disabled={loadingSend || !phone}
-              style={{ padding: "0 12px", marginTop: 24 }}
+            <form
+              onSubmit={handleSubmit}
+              style={{ display: "flex", flexDirection: "column", gap: 12 }}
             >
-              {loadingSend ? "发送中..." : "发送验证码"}
-            </button>
+              <label style={{ fontSize: 14, color: "#374151" }}>
+                邀请码（可选）
+                <input
+                  type="text"
+                  value={inviterCode}
+                  onChange={e => setInviterCode(e.target.value)}
+                  placeholder="请输入邀请码"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    marginTop: 4,
+                    borderRadius: 8,
+                    border: "1px solid #d1d5db"
+                  }}
+                />
+              </label>
+
+              <label style={{ fontSize: 14, color: "#374151" }}>
+                手机号
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    marginTop: 4,
+                    borderRadius: 8,
+                    border: "1px solid #d1d5db"
+                  }}
+                />
+              </label>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <label
+                  style={{
+                    flex: 1,
+                    fontSize: 14,
+                    color: "#374151"
+                  }}
+                >
+                  验证码
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={e => setCode(e.target.value)}
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      marginTop: 4,
+                      borderRadius: 8,
+                      border: "1px solid #d1d5db"
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={loadingSend || !phone}
+                  style={{
+                    marginTop: 24,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: loadingSend || !phone ? "#9ca3af" : "#111827",
+                    backgroundColor: "#f3f4f6",
+                    cursor: loadingSend || !phone ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {loadingSend ? "发送中..." : "发送验证码"}
+                </button>
+              </div>
+
+              {error && (
+                <div style={{ color: "red", fontSize: 12 }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loadingSubmit}
+                style={{
+                  marginTop: 8,
+                  height: 40,
+                  borderRadius: 8,
+                  border: "none",
+                  color: "#ffffff",
+                  fontSize: 16,
+                  cursor: loadingSubmit ? "default" : "pointer",
+                  background:
+                    "linear-gradient(93.33deg, rgba(254,9,70,1) 4%, rgba(184,13,24,1) 52%, rgba(45,45,45,1) 100%)",
+                  boxShadow:
+                    "0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)"
+                }}
+              >
+                {loadingSubmit ? "登录中..." : "打开我的人生牛市"}
+              </button>
+            </form>
           </div>
 
-          {error && (
-            <div style={{ color: "red", fontSize: 12 }}>
-              {error}
-            </div>
-          )}
+          <div
+            style={{
+              marginTop: 16,
+              background: "#eff6ff",
+              borderRadius: 8,
+              border: "1px solid #dbeafe",
+              padding: 12,
+              fontSize: 12,
+              color: "#1e40af"
+            }}
+          >
+            <span style={{ fontWeight: 500 }}>提示：</span>
+            请通过专属渠道获取邀请码，再回来完成登录。
+          </div>
+        </section>
+      </main>
 
-          <button type="submit" disabled={loadingSubmit} style={{ padding: 10, marginTop: 8 }}>
-            {loadingSubmit ? "登录中..." : "打开我的人生牛市"}
-          </button>
-        </form>
-      </div>
-
-      <footer style={{ padding: 16, fontSize: 11, color: "#999", textAlign: "center" }}>
+      <footer
+        style={{
+          padding: 16,
+          fontSize: 11,
+          color: "#9ca3af",
+          textAlign: "center",
+          background: "#111827"
+        }}
+      >
         © 2025 人生牛市 | 仅供娱乐，请勿迷信
       </footer>
     </div>
   );
 };
-
