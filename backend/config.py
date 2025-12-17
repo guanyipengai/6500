@@ -19,6 +19,11 @@ class Settings:
   access_token_expires_minutes: int = int(os.getenv("APP_ACCESS_TOKEN_EXPIRES_MINUTES", str(60 * 24 * 7)))
   base_url: str = os.getenv("APP_BASE_URL", "http://localhost:8000")
 
+  # LLM configuration (SiliconFlow)
+  llm_api_base: str = os.getenv("APP_LLM_API_BASE", "https://api.siliconflow.cn/v1/chat/completions")
+  llm_api_key: str = os.getenv("APP_LLM_API_KEY", "")
+  llm_model: str = os.getenv("APP_LLM_MODEL", "Qwen/Qwen3-30B-A3B-Instruct-2507")
+
 
 @lru_cache
 def get_settings() -> Settings:

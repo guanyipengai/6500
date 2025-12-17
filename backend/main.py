@@ -1,14 +1,15 @@
 from datetime import datetime, date
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from . import schemas
 from .auth import generate_otp, verify_otp, create_access_token, get_current_user
 from .config import get_settings
-from .db import Base, engine, get_db
-from .models import User, Invite
+from .db import Base, engine, get_db, SessionLocal
+from .models import User, Invite, Analysis
+from .llm_client import call_llm, build_prompts, extract_json_from_content
 
 settings = get_settings()
 
@@ -92,12 +93,26 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     .count()
   )
 
-  # Quota fields will be fully implemented in later stages.
-  # For now, return a simple baseline that front-end can integrate with.
   today_base_quota = 5
-  today_extra_quota = 0
-  today_used = 0
-  today_remaining = today_base_quota + today_extra_quota - today_used
+
+  # Extra quota based on successful invites:
+  # every 5 successful invites grants +1 extra, capped at +10 per day.
+  # For now we use totalInvited as a simple approximation; later we can
+  # refine this to use "completed analyses of invited users".
+  extra_by_invites = total_invited // 5
+  today_extra_quota = min(extra_by_invites, 10)
+
+  # Count today's completed analyses
+  analyses_today_done = (
+    db.query(Analysis)
+    .filter(Analysis.user_id == current_user.id)
+    .filter(Analysis.status == "done")
+    .filter(Analysis.created_at >= datetime(today.year, today.month, today.day))
+    .count()
+  )
+
+  today_used = analyses_today_done
+  today_remaining = max(today_base_quota + today_extra_quota - today_used, 0)
 
   my_referral_url = f"{settings.base_url}/auth?ref={current_user.referral_code}"
 
@@ -112,3 +127,99 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     myReferralUrl=my_referral_url,
   )
 
+
+def _run_analysis_background(analysis_id: int) -> None:
+  """
+  Background task: call LLM and update the Analysis record.
+  """
+  db = SessionLocal()
+  try:
+    analysis = db.get(Analysis, analysis_id)
+    if not analysis:
+      return
+
+    system_prompt, user_prompt = build_prompts(analysis.input_json or {})
+    try:
+      content = call_llm(system_prompt, user_prompt)
+      output = extract_json_from_content(content)
+      analysis.output_json = output
+      analysis.status = "done"
+      analysis.error_message = None
+      analysis.completed_at = datetime.utcnow()
+    except Exception as exc:  # noqa: BLE001
+      analysis.status = "error"
+      analysis.error_message = str(exc)
+      analysis.completed_at = datetime.utcnow()
+
+    db.commit()
+  finally:
+    db.close()
+
+
+@app.post("/analysis", response_model=schemas.AnalysisCreateResponse)
+def create_analysis(
+  payload: schemas.AnalysisInput,
+  background_tasks: BackgroundTasks,
+  current_user: User = Depends(get_current_user),
+  db: Session = Depends(get_db),
+) -> schemas.AnalysisCreateResponse:
+  today = date.today()
+
+  # Compute today's quotas for this user
+  today_base_quota = 5
+
+  total_invited = db.query(Invite).filter(Invite.inviter_user_id == current_user.id).count()
+  extra_by_invites = total_invited // 5
+  today_extra_quota = min(extra_by_invites, 10)
+
+  analyses_today_done = (
+    db.query(Analysis)
+    .filter(Analysis.user_id == current_user.id)
+    .filter(Analysis.status == "done")
+    .filter(Analysis.created_at >= datetime(today.year, today.month, today.day))
+    .count()
+  )
+
+  today_used = analyses_today_done
+  today_remaining = today_base_quota + today_extra_quota - today_used
+
+  if today_remaining <= 0:
+    raise HTTPException(
+      status_code=status.HTTP_400_BAD_REQUEST,
+      detail="今日测算次数已用完，请明天再试或通过邀请获得更多次数。",
+    )
+
+  analysis = Analysis(
+    user_id=current_user.id,
+    input_json=payload.model_dump(),
+    status="pending",
+    created_at=datetime.utcnow(),
+  )
+  db.add(analysis)
+  db.commit()
+  db.refresh(analysis)
+
+  background_tasks.add_task(_run_analysis_background, analysis.id)
+
+  return schemas.AnalysisCreateResponse(id=analysis.id, status=analysis.status)
+
+
+@app.get("/analysis/{analysis_id}", response_model=schemas.AnalysisDetail)
+def get_analysis(
+  analysis_id: int,
+  current_user: User = Depends(get_current_user),
+  db: Session = Depends(get_db),
+) -> schemas.AnalysisDetail:
+  analysis = db.get(Analysis, analysis_id)
+  if not analysis or analysis.user_id != current_user.id:
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Analysis not found")
+
+  return schemas.AnalysisDetail(
+    id=analysis.id,
+    status=analysis.status,
+    input=analysis.input_json or {},
+    output=analysis.output_json,
+    error_message=analysis.error_message,
+    created_at=analysis.created_at,
+    completed_at=analysis.completed_at,
+  )

@@ -1,0 +1,89 @@
+开始下一阶段的实现和测试吧
+
+我试了一下大模型调用的api，
+
+curl --request POST \
+  --url https://api.siliconflow.cn/v1/chat/completions \
+  --header 'Authorization: Bearer sk-tdopzyjncesmpohfvwczhybvvmdyhprnsfhoylyqgnfgdhko' \
+  --header 'Content-Type: application/json' \
+  --data '
+{
+  "model": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你好"
+    }
+  ],
+  "stream": false,
+  "max_tokens": 8192,
+  "enable_thinking": false,
+  "thinking_budget": 8192,
+  "min_p": 0.05,
+  "stop": null,
+  "temperature": 0.7,
+  "top_p": 0.7,
+  "top_k": 50,
+  "frequency_penalty": 0.5,
+  "n": 1,
+  "response_format": {
+    "type": "text"
+  },
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "<string>",
+        "description": "<string>",
+        "parameters": {},
+        "strict": false
+      }
+    }
+  ]
+}
+' 
+'
+
+
+
+上面是发送体，然后会接收到 他的回复 ，回复格式是
+
+{
+  "id": "<string>",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "<string>",
+        "reasoning_content": "<string>",
+        "tool_calls": [
+          {
+            "id": "<string>",
+            "type": "function",
+            "function": {
+              "name": "<string>",
+              "arguments": "<string>"
+            }
+          }
+        ]
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 123,
+    "completion_tokens": 123,
+    "total_tokens": 123
+  },
+  "created": 123,
+  "model": "<string>",
+  "object": "chat.completion"
+}
+
+
+例如  
+
+{"id":"019b299baa0855f380653bd612b4ac5a","object":"chat.completion","created":1765929626,"model":"Qwen/Qwen3-30B-A3B-Instruct-2507","choices":[{"index":0,"message":{"role":"assistant","content":"你好！有什么我可以帮你的吗？😊"},"finish_reason":"stop"}],"usage":{"prompt_tokens":9,"completion_tokens":9,"total_tokens":18},"system_fingerprint":""}
+
+你就可以
+

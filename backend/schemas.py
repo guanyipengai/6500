@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -43,3 +43,37 @@ class UserMeResponse(BaseModel):
   totalInvited: int
   invitedToday: int
   myReferralUrl: str
+
+
+class AnalysisInput(BaseModel):
+  """
+  Input fields for creating an analysis task.
+
+  Mirrors the essential parts of the previous front-end UserInput,
+  but without exposing model/apiKey settings to users.
+  """
+
+  name: Optional[str] = None
+  gender: str = Field(..., description="Male or Female")
+  birth_year: int
+  year_pillar: str
+  month_pillar: str
+  day_pillar: str
+  hour_pillar: str
+  start_age: int
+  first_da_yun: str
+
+
+class AnalysisCreateResponse(BaseModel):
+  id: int
+  status: str
+
+
+class AnalysisDetail(BaseModel):
+  id: int
+  status: str
+  input: Dict[str, Any]
+  output: Optional[Dict[str, Any]] = None
+  error_message: Optional[str] = None
+  created_at: datetime
+  completed_at: Optional[datetime] = None
