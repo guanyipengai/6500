@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createAnalysis, getMe } from "../api";
 import { useAuthToken } from "../hooks";
 import type { AnalysisInput } from "../types";
+import logo from "../assets/logo.svg";
 
 export const ProfilePage: React.FC = () => {
   const { token } = useAuthToken();
@@ -104,14 +105,13 @@ export const ProfilePage: React.FC = () => {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
+            <img
+              src={logo}
+              alt="人生牛市 Logo"
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 999,
-                background:
-                  "linear-gradient(135deg, rgba(250,245,255,1) 0%, rgba(253,242,248,1) 100%)",
-                border: "1px solid #e5e7eb"
+                borderRadius: 8
               }}
             />
             <div>

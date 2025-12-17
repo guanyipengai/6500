@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { sendCode, verifyCode } from "../api";
 import { useAuthToken } from "../hooks";
+import logo from "../assets/logo.svg";
 
 export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
@@ -85,14 +86,13 @@ export const AuthPage: React.FC = () => {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
+            <img
+              src={logo}
+              alt="人生牛市 Logo"
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 999,
-                background:
-                  "linear-gradient(135deg, rgba(250,245,255,1) 0%, rgba(253,242,248,1) 100%)",
-                border: "1px solid #e5e7eb"
+                borderRadius: 8
               }}
             />
             <div>
