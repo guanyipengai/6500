@@ -2,14 +2,22 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAnalysis, getMe, type AnalysisDetail } from "../api";
 import { useAuthToken } from "../hooks";
+import type { LifeDestinyResult } from "../types";
+import { AnalysisResult } from "../components/AnalysisResult";
+import { LifeKLineChart } from "../components/LifeKLineChart";
 
 export const ResultPage: React.FC = () => {
   const { token } = useAuthToken();
   const params = useParams<{ analysisId: string }>();
   const navigate = useNavigate();
   const [analysis, setAnalysis] = useState<AnalysisDetail | null>(null);
+  const [lifeResult, setLifeResult] = useState<LifeDestinyResult | null>(null);
   const [inviteInfo, setInviteInfo] = useState<{
+    todayBaseQuota: number;
+    todayExtraQuota: number;
     todayRemaining: number;
+    totalInvited: number;
+    invitedToday: number;
     myReferralUrl: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +38,36 @@ export const ResultPage: React.FC = () => {
       try {
         const detail = await getAnalysis(token, analysisId);
         setAnalysis(detail);
-        if (detail.status === "pending") {
+        if (detail.status === "done" && detail.output) {
+          const raw = detail.output as any;
+          const result: LifeDestinyResult = {
+            chartData: raw.chartPoints || [],
+            analysis: {
+              bazi: raw.bazi || [],
+              summary: raw.summary || "",
+              summaryScore: raw.summaryScore ?? 5,
+              personality: raw.personality || "",
+              personalityScore: raw.personalityScore ?? 5,
+              industry: raw.industry || "",
+              industryScore: raw.industryScore ?? 5,
+              fengShui: raw.fengShui || "",
+              fengShuiScore: raw.fengShuiScore ?? 5,
+              wealth: raw.wealth || "",
+              wealthScore: raw.wealthScore ?? 5,
+              marriage: raw.marriage || "",
+              marriageScore: raw.marriageScore ?? 5,
+              health: raw.health || "",
+              healthScore: raw.healthScore ?? 5,
+              family: raw.family || "",
+              familyScore: raw.familyScore ?? 5,
+              crypto: raw.crypto || "",
+              cryptoScore: raw.cryptoScore ?? 5,
+              cryptoYear: raw.cryptoYear || "",
+              cryptoStyle: raw.cryptoStyle || ""
+            }
+          };
+          setLifeResult(result);
+        } else if (detail.status === "pending") {
           timer = window.setTimeout(fetchAnalysis, 3000);
         }
       } catch (e: any) {
@@ -44,7 +81,11 @@ export const ResultPage: React.FC = () => {
       try {
         const me = await getMe(token);
         setInviteInfo({
+          todayBaseQuota: me.todayBaseQuota,
+          todayExtraQuota: me.todayExtraQuota,
           todayRemaining: me.todayRemaining,
+          totalInvited: me.totalInvited,
+          invitedToday: me.invitedToday,
           myReferralUrl: me.myReferralUrl
         });
       } catch (e) {
@@ -65,10 +106,13 @@ export const ResultPage: React.FC = () => {
   }
 
   return (
-    <div style={{ minHeight: "100vh", padding: 16, maxWidth: 720, margin: "0 auto" }}>
-      <h1 style={{ fontSize: 22, marginBottom: 12 }}>人生牛市 · 分析结果</h1>
+    <div style={{ minHeight: "100vh", padding: 16, maxWidth: 1024, margin: "0 auto" }}>
+      <header style={{ marginBottom: 24, textAlign: "center" }}>
+        <h1 style={{ fontSize: 24, marginBottom: 8 }}>人生牛市 · 分析结果</h1>
+        <p style={{ fontSize: 13, color: "#555" }}>结合八字命理与 AI 推演，为你绘制 100 年人生 K 线。</p>
+      </header>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <p style={{ color: "red", marginBottom: 16 }}>{error}</p>}
 
       {!analysis && !error && <p>加载中...</p>}
 
@@ -84,27 +128,49 @@ export const ResultPage: React.FC = () => {
         </div>
       )}
 
-      {analysis && analysis.status === "done" && (
-        <div style={{ marginBottom: 24 }}>
-          <p>分析已完成（ID：{analysis.id}）。</p>
-          <p style={{ fontSize: 12, color: "#555" }}>后续会在这里接入详细分析卡片和 K 线图。</p>
-        </div>
+      {lifeResult && (
+        <>
+          <section style={{ marginBottom: 32 }}>
+            <AnalysisResult analysis={lifeResult.analysis} />
+          </section>
+
+          <section style={{ marginBottom: 32 }}>
+            <LifeKLineChart data={lifeResult.chartData} />
+          </section>
+        </>
       )}
 
-      <hr style={{ margin: "24px 0" }} />
-
-      <section>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 18, marginBottom: 8 }}>邀请好友，获得更多测算次数</h2>
         {inviteInfo && (
-          <>
-            <p style={{ marginBottom: 4 }}>今日剩余次数：{inviteInfo.todayRemaining}</p>
-            <p style={{ marginBottom: 4, wordBreak: "break-all" }}>
-              我的专属链接：{inviteInfo.myReferralUrl}
+          <div
+            style={{
+              borderRadius: 12,
+              border: "1px solid #eee",
+              padding: 12,
+              background: "#faf5ff"
+            }}
+          >
+            <p style={{ marginBottom: 4 }}>
+              今日剩余次数：{inviteInfo.todayRemaining}（基础 {inviteInfo.todayBaseQuota} 次 / 推广{" "}
+              {inviteInfo.todayExtraQuota} 次）
             </p>
-          </>
+            <p style={{ marginBottom: 4 }}>
+              累计推荐：{inviteInfo.totalInvited} 人，今日获得：{inviteInfo.invitedToday} 人
+            </p>
+            <p style={{ marginBottom: 4, fontSize: 12, color: "#555" }}>
+              规则：分享链接给朋友，每有 1 人完成测算，你就获得 +1 次机会。每天最多获得 10 次。
+            </p>
+            <p style={{ marginBottom: 4, wordBreak: "break-all", fontSize: 12 }}>
+              我的专属推广链接：{inviteInfo.myReferralUrl}
+            </p>
+          </div>
         )}
       </section>
+
+      <footer style={{ fontSize: 11, color: "#999", textAlign: "center", paddingBottom: 16 }}>
+        © 2025 人生牛市 | 仅供娱乐，请勿迷信
+      </footer>
     </div>
   );
 };
-
