@@ -2,10 +2,11 @@ from datetime import datetime, date
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from . import schemas
-from .auth import generate_otp, verify_otp, create_access_token, get_current_user
+from .auth import generate_otp, verify_otp, create_access_token, get_current_user, get_otp_store_snapshot
 from .config import get_settings
 from .db import Base, engine, get_db, SessionLocal
 from .models import User, Invite, Analysis
@@ -16,6 +17,14 @@ settings = get_settings()
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Life Bull Market API", version="0.1.0")
+
+app.add_middleware(
+  CORSMiddleware,
+  allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
 
 
 def _generate_unique_referral_code(db: Session) -> str:
@@ -78,6 +87,23 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session = Depends(get_db
 
   token = create_access_token(user_id=user.id)
   return schemas.Token(access_token=token)
+
+
+@app.get("/debug/otp-store")
+def debug_get_otp_store() -> dict:
+  """
+  Development helper endpoint to inspect in-memory OTP codes.
+
+  WARNING: do not expose this in a production deployment.
+  """
+  snapshot = get_otp_store_snapshot()
+  return {
+    phone: {
+      "code": code,
+      "expires_at": expires_at.isoformat(),
+    }
+    for phone, (code, expires_at) in snapshot.items()
+  }
 
 
 @app.get("/user/me", response_model=schemas.UserMeResponse)

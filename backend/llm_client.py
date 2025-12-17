@@ -126,6 +126,57 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
   api_base = getattr(settings, "llm_api_base", None) or "https://api.siliconflow.cn/v1/chat/completions"
   model = getattr(settings, "llm_model", None) or "Qwen/Qwen3-30B-A3B-Instruct-2507"
 
+  # Lightweight demo mode: when api_key is set to "demo", skip real HTTP calls
+  # and return a small but structurally valid JSON payload.
+  if api_key == "demo":
+    chart_points = []
+    start_year = 2000
+    for age in range(1, 101):
+      year = start_year + age - 1
+      base = 50
+      # Create some up/down waves to mimic bull/bear cycles
+      wave = ((age % 10) - 5) * 3
+      score = max(10, min(90, base + wave * 2))
+      point = {
+        "age": age,
+        "year": year,
+        "daYun": "童限" if age < 10 else "示例大运",
+        "ganZhi": "示例干支",
+        "open": score - 3,
+        "close": score + 3,
+        "high": score + 6,
+        "low": score - 6,
+        "score": score,
+        "reason": "示例流年分析，供本地调试使用"
+      }
+      chart_points.append(point)
+
+    demo_payload = {
+      "bazi": ["癸未", "壬戌", "丙子", "庚寅"],
+      "summary": "这是本地 demo 模式下生成的示例总评，用于验证前后端联通与渲染流程。",
+      "summaryScore": 7,
+      "personality": "性格沉稳理性，擅长在波动市场中寻找结构性机会。",
+      "personalityScore": 8,
+      "industry": "适合长期主义与复利思维主导的行业，如科技与基础设施。",
+      "industryScore": 7,
+      "fengShui": "宜多接触山海之气，办公与居住保持采光通风，远离杂乱与噪音。",
+      "fengShuiScore": 8,
+      "wealth": "财富呈阶梯式上升，中年后机会明显增多，注意分散风险。",
+      "wealthScore": 8,
+      "marriage": "情感务实重稳，宜多沟通表达内心需求，避免因忙碌忽略陪伴。",
+      "marriageScore": 7,
+      "health": "总体健康良好，注意作息规律与运动，坚持体检排查潜在问题。",
+      "healthScore": 7,
+      "family": "与家人关系温和稳定，关键年份需多承担责任与支持。",
+      "familyScore": 7,
+      "crypto": "币圈运势偏稳健，适合中长期布局主流资产，把握周期轮动。",
+      "cryptoScore": 7,
+      "cryptoYear": "2032年 (示例暴富流年)",
+      "cryptoStyle": "现货定投",
+      "chartPoints": chart_points,
+    }
+    return json.dumps(demo_payload, ensure_ascii=False)
+
   if not api_key:
     raise RuntimeError("LLM API key is not configured (APP_LLM_API_KEY).")
 
@@ -186,4 +237,3 @@ def extract_json_from_content(content: str) -> dict:
 
   snippet = content[start : end + 1]
   return json.loads(snippet)
-
