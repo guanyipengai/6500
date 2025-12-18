@@ -1,6 +1,10 @@
 import type { AnalysisInput, BasicProfileInput, BaziResult } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== "undefined" && window.location.origin
+    ? window.location.origin
+    : "http://localhost:8000");
 
 export interface TokenResponse {
   access_token: string;

@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+e2e-screenshots
+backend/local-config.json
+backend.db
+reference
+.git
+.gitignore
+__pycache__
+*.pyc
+
