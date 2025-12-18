@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from . import schemas
@@ -341,13 +342,41 @@ def get_analysis(
   )
 
 
-# When running in Docker (or after a local `npm run build`), we may have a
-# compiled frontend under frontend/dist. 如果存在，则将其挂载为静态站点，
-# 这样生产环境中只需要暴露后端端口即可同时访问前端页面。
+# When running in Docker (或在本地执行 `npm run build` 之后)，我们会有一个
+# 编译好的前端产物位于 frontend/dist。这里做两件事：
+# 1. 将 dist/assets 挂到 /assets，供静态资源访问；
+# 2. 为前端路由（/、/auth、/profile、/bazi/...、/result/...）提供统一的
+#    index.html 返回，让 React Router 负责前端路由解析。
 FRONTEND_DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+
+def _read_frontend_index() -> str:
+  index_file = FRONTEND_DIST_DIR / "index.html"
+  try:
+    return index_file.read_text(encoding="utf-8")
+  except FileNotFoundError as exc:  # noqa: BLE001
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
+
+
 if FRONTEND_DIST_DIR.exists():
-  app.mount(
-    "/",
-    StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True),
-    name="frontend",
-  )
+  assets_dir = FRONTEND_DIST_DIR / "assets"
+  if assets_dir.exists():
+    app.mount(
+      "/assets",
+      StaticFiles(directory=str(assets_dir)),
+      name="frontend-assets",
+    )
+
+  @app.get("/", include_in_schema=False)
+  @app.get("/auth", include_in_schema=False)
+  @app.get("/profile", include_in_schema=False)
+  @app.get("/bazi/{path:path}", include_in_schema=False)
+  @app.get("/result/{path:path}", include_in_schema=False)
+  def serve_frontend_app(path: str | None = None) -> HTMLResponse:
+    """
+    Serve the SPA entrypoint for known frontend routes.
+
+    注意：仅处理 GET 请求，后端 API 如 /auth/send-code 仍由上面的
+    FastAPI 路由负责。
+    """
+    return HTMLResponse(_read_frontend_index())
