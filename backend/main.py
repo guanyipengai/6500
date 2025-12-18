@@ -30,17 +30,6 @@ app.add_middleware(
   allow_headers=["*"],
 )
 
-# When running in Docker (or after a local `npm run build`), we may have a
-# compiled frontend under frontend/dist. If存在，则将其挂载为静态站点，
-# 这样生产环境中只需要暴露后端端口即可同时访问前端页面。
-FRONTEND_DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
-if FRONTEND_DIST_DIR.exists():
-  app.mount(
-    "/",
-    StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True),
-    name="frontend",
-  )
-
 
 def _generate_unique_referral_code(db: Session) -> str:
   import secrets
@@ -349,4 +338,16 @@ def get_analysis(
     error_message=analysis.error_message,
     created_at=analysis.created_at,
     completed_at=analysis.completed_at,
+  )
+
+
+# When running in Docker (or after a local `npm run build`), we may have a
+# compiled frontend under frontend/dist. 如果存在，则将其挂载为静态站点，
+# 这样生产环境中只需要暴露后端端口即可同时访问前端页面。
+FRONTEND_DIST_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if FRONTEND_DIST_DIR.exists():
+  app.mount(
+    "/",
+    StaticFiles(directory=str(FRONTEND_DIST_DIR), html=True),
+    name="frontend",
   )
