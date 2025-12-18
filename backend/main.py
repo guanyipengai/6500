@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from sqlalchemy.orm import Session
 
 from . import schemas
@@ -366,6 +366,25 @@ if FRONTEND_DIST_DIR.exists():
       StaticFiles(directory=str(assets_dir)),
       name="frontend-assets",
     )
+
+  title_font = FRONTEND_DIST_DIR / "title.ttf"
+  content_font = FRONTEND_DIST_DIR / "content.ttf"
+  qrcode_image = FRONTEND_DIST_DIR / "qrcode.jpg"
+
+  if title_font.exists():
+    @app.get("/title.ttf", include_in_schema=False)
+    def serve_title_font() -> FileResponse:
+      return FileResponse(str(title_font), media_type="font/ttf")
+
+  if content_font.exists():
+    @app.get("/content.ttf", include_in_schema=False)
+    def serve_content_font() -> FileResponse:
+      return FileResponse(str(content_font), media_type="font/ttf")
+
+  if qrcode_image.exists():
+    @app.get("/qrcode.jpg", include_in_schema=False)
+    def serve_qrcode() -> FileResponse:
+      return FileResponse(str(qrcode_image), media_type="image/jpeg")
 
   @app.get("/", include_in_schema=False)
   @app.get("/auth", include_in_schema=False)
