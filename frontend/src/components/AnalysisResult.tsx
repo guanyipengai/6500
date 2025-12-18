@@ -143,18 +143,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ analysis }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card
-          title="币圈交易运势"
-          icon={Bitcoin}
+          title="星座运势"
+          icon={Star}
           content={analysis.crypto}
           score={analysis.cryptoScore}
           colorClass="text-amber-600"
           extraBadges={
             <>
               <span className="px-2 py-1 bg-amber-50 text-amber-700 text-xs font-bold rounded border border-amber-200">
-                🔥 暴富流年: {analysis.cryptoYear}
+                ✨ 关键年份: {analysis.cryptoYear}
               </span>
               <span className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded border border-indigo-200">
-                🎯 推荐: {analysis.cryptoStyle}
+                🧭 风格建议: {analysis.cryptoStyle}
               </span>
             </>
           }
@@ -246,4 +246,3 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ analysis }) => {
     </div>
   );
 };
-

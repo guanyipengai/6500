@@ -1,4 +1,4 @@
-import type { AnalysisInput } from "./types";
+import type { AnalysisInput, BasicProfileInput, BaziResult } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 
@@ -78,6 +78,22 @@ export async function createAnalysis(token: string, input: AnalysisInput): Promi
   return resp.json();
 }
 
+export async function calculateBazi(token: string, input: BasicProfileInput): Promise<BaziResult> {
+  const resp = await fetch(`${API_BASE}/bazi/calc`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(input)
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "八字排盘失败");
+  }
+  return resp.json();
+}
+
 export interface AnalysisDetail {
   id: number;
   status: string;
@@ -101,3 +117,25 @@ export async function getAnalysis(token: string, id: number): Promise<AnalysisDe
   return resp.json();
 }
 
+export interface LatestAnalysis {
+  id: number;
+  status: string;
+  input: AnalysisInput;
+  created_at: string;
+}
+
+export async function getLatestAnalysis(token: string): Promise<LatestAnalysis | null> {
+  const resp = await fetch(`${API_BASE}/analysis/latest`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (resp.status === 404) {
+    return null;
+  }
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(text || "获取最新分析失败");
+  }
+  return resp.json();
+}

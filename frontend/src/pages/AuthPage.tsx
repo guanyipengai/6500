@@ -80,9 +80,10 @@ export const AuthPage: React.FC = () => {
             maxWidth: 420,
             margin: "0 auto",
             padding: "0 16px",
+            position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between"
+            justifyContent: "flex-start"
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -100,7 +101,8 @@ export const AuthPage: React.FC = () => {
                 style={{
                   fontSize: 18,
                   lineHeight: "24px",
-                  color: "#111827"
+                  color: "#111827",
+                  fontFamily: "CeniuTitle, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
                 }}
               >
                 人生牛市
@@ -165,9 +167,12 @@ export const AuthPage: React.FC = () => {
               lineHeight: "20px"
             }}
           >
-            以易经观变，以数据成形，让百年人生显现为一条折线。
+            以易经观变，以数据成形，
             <br />
-            看见起伏 · 理解节奏 · 把握转折。
+            让百年人生显现为一条折线
+            <br />
+            <br />
+            看见起伏 理解节奏 把握转折
           </p>
         </section>
 
@@ -196,16 +201,8 @@ export const AuthPage: React.FC = () => {
                   color: "#1f2937"
                 }}
               >
-                八字排盘登录
+                八字排盘
               </h2>
-              <p
-                style={{
-                  fontSize: 13,
-                  color: "#6b7280"
-                }}
-              >
-                填写邀请码并使用手机号登录，开启你的人生牛市。
-              </p>
             </div>
 
             <form
@@ -213,7 +210,7 @@ export const AuthPage: React.FC = () => {
               style={{ display: "flex", flexDirection: "column", gap: 12 }}
             >
               <label style={{ fontSize: 14, color: "#374151" }}>
-                邀请码（可选）
+                请输入邀请码
                 <input
                   type="text"
                   value={inviterCode}
@@ -326,8 +323,47 @@ export const AuthPage: React.FC = () => {
               color: "#1e40af"
             }}
           >
-            <span style={{ fontWeight: 500 }}>提示：</span>
-            请通过专属渠道获取邀请码，再回来完成登录。
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                marginBottom: 8
+              }}
+            >
+              <span style={{ fontWeight: 500 }}>提示：</span>
+              <span>请通过专属渠道获取邀请码，再回来完成登录。</span>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginTop: 4
+              }}
+            >
+              <a
+                href="/qrcode.jpg"
+                download="ceniushi-wechat-qrcode.jpg"
+                style={{
+                  display: "inline-block",
+                  borderRadius: 12,
+                  backgroundColor: "#ffffff",
+                  padding: 8
+                }}
+              >
+                <img
+                  src="/qrcode.jpg"
+                  alt="微信二维码"
+                  style={{
+                    width: 112,
+                    height: 112,
+                    borderRadius: 8,
+                    display: "block"
+                  }}
+                />
+              </a>
+            </div>
           </div>
         </section>
       </main>

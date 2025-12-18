@@ -138,99 +138,126 @@ const PeakLabel: React.FC<any> = props => {
 };
 
 export const LifeKLineChart: React.FC<LifeKLineChartProps> = ({ data }) => {
-  const transformedData = data.map(d => ({
-    ...d,
-    bodyRange: [Math.min(d.open, d.close), Math.max(d.open, d.close)],
-    labelPoint: d.high
-  }));
 
-  const daYunChanges = data.filter((d, i) => {
-    if (i === 0) return true;
-    return d.daYun !== data[i - 1].daYun;
-  });
+  const transformedData = React.useMemo(
+    () =>
+      data.map(d => ({
+        ...d,
+        bodyRange: [Math.min(d.open, d.close), Math.max(d.open, d.close)],
+        labelPoint: d.high
+      })),
+    [data]
+  );
 
-  const maxHigh = data.length > 0 ? Math.max(...data.map(d => d.high)) : 100;
+  const daYunChanges = React.useMemo(
+    () =>
+      transformedData.filter((d, i) => {
+        if (i === 0) return true;
+        return d.daYun !== transformedData[i - 1].daYun;
+      }),
+    [transformedData]
+  );
+
+  const maxHigh =
+    transformedData.length > 0 ? Math.max(...transformedData.map(d => d.high)) : 100;
 
   if (!data || data.length === 0) {
     return <div className="h-[500px] flex items-center justify-center text-gray-400">无数据</div>;
   }
 
   return (
-    <div className="w-full h-[600px] bg-white p-2 md:p-6 rounded-xl border border-gray-200 shadow-sm relative">
-      <div className="mb-6 flex justify-between items-center px-2">
+    <div className="w-full bg-white p-2 md:p-6 rounded-xl border border-gray-200 shadow-sm relative">
+      <div className="mb-4 flex justify-between items-center px-2">
         <h3 className="text-xl font-bold text-gray-800 font-serif-sc">人生流年大运K线图</h3>
-        <div className="flex gap-4 text-xs font-medium">
-          <span className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded">
-            <div className="w-2 h-2 bg-green-500 mr-2 rounded-full" />
-            吉运 (涨)
-          </span>
-          <span className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded">
-            <div className="w-2 h-2 bg-red-500 mr-2 rounded-full" />
-            凶运 (跌)
-          </span>
+        <div className="flex items-center gap-3 text-xs font-medium">
+          <div className="flex gap-3">
+            <span className="flex items-center text-green-700 bg-green-50 px-2 py-1 rounded">
+              <div className="w-2 h-2 bg-green-500 mr-2 rounded-full" />
+              吉运 (涨)
+            </span>
+            <span className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded">
+              <div className="w-2 h-2 bg-red-500 mr-2 rounded-full" />
+              凶运 (跌)
+            </span>
+          </div>
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height="90%">
-        <ComposedChart data={transformedData} margin={{ top: 30, right: 10, left: 0, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-          <XAxis
-            dataKey="age"
-            tick={{ fontSize: 10, fill: "#6b7280" }}
-            interval={9}
-            axisLine={{ stroke: "#e5e7eb" }}
-            tickLine={false}
-            label={{
-              value: "年龄",
-              position: "insideBottomRight",
-              offset: -5,
-              fontSize: 10,
-              fill: "#9ca3af"
-            }}
-          />
-          <YAxis
-            domain={[0, "auto"]}
-            tick={{ fontSize: 10, fill: "#6b7280" }}
-            axisLine={false}
-            tickLine={false}
-            label={{
-              value: "运势分",
-              angle: -90,
-              position: "insideLeft",
-              fontSize: 10,
-              fill: "#9ca3af"
-            }}
-          />
-          <Tooltip
-            content={<CustomTooltip />}
-            cursor={{ stroke: "#9ca3af", strokeWidth: 1, strokeDasharray: "4 4" }}
-          />
-
-          {daYunChanges.map((point, index) => (
-            <ReferenceLine
-              key={`dayun-${index}`}
-              x={point.age}
-              stroke="#cbd5e1"
-              strokeDasharray="3 3"
-              strokeWidth={1}
+      <div className="w-full h-[440px] flex items-center justify-center overflow-hidden">
+        <div className="w-full h-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={transformedData}
+              margin={{ top: 30, right: 10, left: 0, bottom: 20 }}
             >
-              <Label
-                value={point.daYun}
-                position="top"
-                fill="#6366f1"
-                fontSize={10}
-                fontWeight="bold"
-                className="hidden md:block"
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <XAxis
+                dataKey="age"
+                tick={{ fontSize: 10, fill: "#6b7280" }}
+                interval={9}
+                axisLine={{ stroke: "#e5e7eb" }}
+                tickLine={false}
+                label={{
+                  value: "年龄",
+                  position: "insideBottomRight",
+                  offset: -5,
+                  fontSize: 10,
+                  fill: "#9ca3af"
+                }}
               />
-            </ReferenceLine>
-          ))}
+              <YAxis
+                domain={[0, "auto"]}
+                tick={{ fontSize: 10, fill: "#6b7280" }}
+                axisLine={false}
+                tickLine={false}
+                label={{
+                  value: "运势分",
+                  angle: -90,
+                  position: "insideLeft",
+                  fontSize: 10,
+                  fill: "#9ca3af"
+                }}
+              />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ stroke: "#9ca3af", strokeWidth: 1, strokeDasharray: "4 4" }}
+              />
 
-          <Bar dataKey="bodyRange" shape={<CandleShape />} isAnimationActive animationDuration={1500}>
-            <LabelList dataKey="high" position="top" content={<PeakLabel maxHigh={maxHigh} />} />
-          </Bar>
-        </ComposedChart>
-      </ResponsiveContainer>
+              {daYunChanges.map((point, index) => (
+                <ReferenceLine
+                  key={`dayun-${index}`}
+                  x={point.age}
+                  stroke="#cbd5e1"
+                  strokeDasharray="3 3"
+                  strokeWidth={1}
+                >
+                  <Label
+                    value={point.daYun}
+                    position="top"
+                    fill="#6366f1"
+                    fontSize={10}
+                    fontWeight="bold"
+                    className="hidden md:block"
+                  />
+                </ReferenceLine>
+              ))}
+
+              <Bar
+                dataKey="bodyRange"
+                shape={<CandleShape />}
+                isAnimationActive
+                animationDuration={1500}
+              >
+                <LabelList
+                  dataKey="high"
+                  position="top"
+                  content={<PeakLabel maxHigh={maxHigh} />}
+                />
+              </Bar>
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 };
-

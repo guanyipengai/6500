@@ -19,12 +19,34 @@ class Settings:
   secret_key: str = "dev-secret"
   algorithm: str = "HS256"
   access_token_expires_minutes: int = 60 * 24 * 7
-  base_url: str = "http://localhost:8000"
+  # Optional public base URL for generating links (e.g. referral URLs).
+  # When left empty, the application will derive the base URL from the
+  # incoming HTTP request (request.base_url), so you usually do not need
+  # to change this between development and production.
+  base_url: str = ""
 
-  # LLM configuration (SiliconFlow)
-  llm_api_base: str = "https://api.siliconflow.cn/v1/chat/completions"
+  # LLM configuration (Doubao / Ark, OpenAI-compatible)
+  # 默认对接火山方舟 OpenAI 兼容接口，可通过环境变量覆盖：
+  # - APP_LLM_API_BASE / APP_LLM_API_KEY / APP_LLM_MODEL
+  # 同时也兼容官方示例中的 ARK_API_KEY 环境变量。
+  llm_api_base: str = "https://ark.cn-beijing.volces.com/api/v3"
   llm_api_key: str = ""
-  llm_model: str = "Qwen/Qwen3-30B-A3B-Instruct-2507"
+  llm_model: str = "doubao-seed-1-6-251015"
+
+  # SMS configuration (Alibaba Cloud Dypnsapi)
+  # When sms_sign_name and sms_template_code are non-empty and the
+  # Alibaba Cloud SDK is installed, the backend will attempt to send
+  # verification codes via SMS in addition to the in-memory OTP store.
+  # 默认使用项目说明中的示例配置，只需更换手机号即可。
+  # 对于 AccessKeyId/Secret，建议仅在本地的 backend/local-config.json
+  # 或环境变量中配置，避免提交到版本库。
+  sms_access_key_id: str = ""
+  sms_access_key_secret: str = ""
+  sms_sign_name: str = "速通互联验证码"
+  sms_template_code: str = "100001"
+  # Template for `template_param`, where `##code##` will be replaced
+  # with the generated verification code.
+  sms_template_param_template: str = '{"code":"##code##","min":"5"}'
 
 
 def _apply_local_config(settings: Settings) -> None:
@@ -50,8 +72,19 @@ def _apply_local_config(settings: Settings) -> None:
   if not isinstance(data, dict):
     return
 
-  # Currently我们只从本地文件读取 LLM 相关配置，避免误改数据库等敏感设置
-  for field in ("llm_api_key", "llm_api_base", "llm_model"):
+  # Currently我们只从本地文件读取 LLM 相关配置、base_url 和 SMS 配置，
+  # 避免误改数据库等敏感设置。
+  for field in (
+    "llm_api_key",
+    "llm_api_base",
+    "llm_model",
+    "base_url",
+    "sms_access_key_id",
+    "sms_access_key_secret",
+    "sms_sign_name",
+    "sms_template_code",
+    "sms_template_param_template",
+  ):
     if field in data and data[field]:
       setattr(settings, field, str(data[field]))
 
@@ -69,6 +102,11 @@ def _apply_env_overrides(settings: Settings) -> None:
     "llm_api_base": "APP_LLM_API_BASE",
     "llm_api_key": "APP_LLM_API_KEY",
     "llm_model": "APP_LLM_MODEL",
+    "sms_access_key_id": "APP_SMS_ACCESS_KEY_ID",
+    "sms_access_key_secret": "APP_SMS_ACCESS_KEY_SECRET",
+    "sms_sign_name": "APP_SMS_SIGN_NAME",
+    "sms_template_code": "APP_SMS_TEMPLATE_CODE",
+    "sms_template_param_template": "APP_SMS_TEMPLATE_PARAM_TEMPLATE",
   }
 
   for attr, env_name in mapping.items():

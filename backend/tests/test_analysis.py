@@ -106,3 +106,90 @@ def test_create_analysis_and_background_llm(monkeypatch, gender: str) -> None:
   finally:
     db.close()
 
+
+def test_get_latest_analysis_skips_error_and_returns_most_recent(monkeypatch) -> None:
+  """
+  Ensure /analysis/latest returns the most recent non-error analysis
+  for the current user.
+  """
+
+  def fake_call_llm(system_prompt: str, user_prompt: str) -> str:
+    return """
+    {
+      "bazi": ["癸未", "壬戌", "丙子", "庚寅"],
+      "summary": "测试总评",
+      "summaryScore": 7,
+      "personality": "测试性格",
+      "personalityScore": 8,
+      "industry": "测试事业",
+      "industryScore": 7,
+      "fengShui": "测试风水",
+      "fengShuiScore": 8,
+      "wealth": "测试财富",
+      "wealthScore": 7,
+      "marriage": "测试婚姻",
+      "marriageScore": 6,
+      "health": "测试健康",
+      "healthScore": 6,
+      "family": "测试六亲",
+      "familyScore": 7,
+      "crypto": "测试币圈",
+      "cryptoScore": 7,
+      "cryptoYear": "2025年 (乙巳)",
+      "cryptoStyle": "现货定投",
+      "chartPoints": [
+        {"age": 1, "year": 2000, "daYun": "童限", "ganZhi": "庚辰", "open": 50, "close": 55, "high": 60, "low": 45, "score": 55, "reason": "测试年份一"}
+      ]
+    }
+    """
+
+  monkeypatch.setattr("backend.main.call_llm", fake_call_llm)
+
+  token = _signup_user("13900000003")
+
+  payload1 = {
+    "name": "用户一",
+    "gender": "Male",
+    "birth_year": 1990,
+    "year_pillar": "癸未",
+    "month_pillar": "壬戌",
+    "day_pillar": "丙子",
+    "hour_pillar": "庚寅",
+    "start_age": 8,
+    "first_da_yun": "辛酉",
+  }
+  payload2 = {
+    "name": "用户二",
+    "gender": "Male",
+    "birth_year": 1991,
+    "year_pillar": "甲申",
+    "month_pillar": "乙酉",
+    "day_pillar": "丙戌",
+    "hour_pillar": "丁亥",
+    "start_age": 9,
+    "first_da_yun": "壬戌",
+  }
+
+  resp = client.post("/analysis", json=payload1, headers={"Authorization": f"Bearer {token}"})
+  assert resp.status_code == 200
+  first_id = resp.json()["id"]
+
+  resp = client.post("/analysis", json=payload2, headers={"Authorization": f"Bearer {token}"})
+  assert resp.status_code == 200
+  second_id = resp.json()["id"]
+
+  # Mark the second analysis as error so that latest endpoint should pick the first one.
+  db = SessionLocal()
+  try:
+    second = db.query(Analysis).filter(Analysis.id == second_id).first()
+    assert second is not None
+    second.status = "error"
+    db.commit()
+  finally:
+    db.close()
+
+  resp = client.get("/analysis/latest", headers={"Authorization": f"Bearer {token}"})
+  assert resp.status_code == 200
+  latest = resp.json()
+  assert latest["id"] == first_id
+  assert latest["input"]["birth_year"] == payload1["birth_year"]

@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 当前不再使用 CSS 旋转 K 线图，旋转视图改为使用 Recharts 的纵向布局。此样式占位，保留类名以防未来扩展。 */
+.life-kline-rotated .recharts-wrapper {
+}
+@font-face {
+  font-family: "CeniuTitle";
+  src: url("/title.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "CeniuContent";
+  src: url("/content.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: "CeniuContent", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}

@@ -3,7 +3,7 @@ from typing import Optional
 import json
 from pathlib import Path
 
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,8 @@ from .auth import generate_otp, verify_otp, create_access_token, get_current_use
 from .config import get_settings
 from .db import Base, engine, get_db, SessionLocal
 from .models import User, Invite, Analysis
-from .llm_client import call_llm, build_prompts, extract_json_from_content
+from .llm_client import call_llm, build_prompts, extract_json_from_content, calculate_bazi_from_basic_info
+from .sms_client import send_verification_code_sms, verify_sms_code
 
 settings = get_settings()
 
@@ -45,14 +46,30 @@ def _generate_unique_referral_code(db: Session) -> str:
 @app.post("/auth/send-code", response_model=schemas.SendCodeResponse)
 def send_code(payload: schemas.SendCodeRequest) -> schemas.SendCodeResponse:
   code = generate_otp(payload.phone)
-  # For development we log the code; in production this would call an SMS provider.
+  # For development we log the code; in production this will also
+  # trigger an SMS via the configured provider (see sms_client).
   print(f"[DEV] Sending verification code {code} to phone {payload.phone}")
+  try:
+    send_verification_code_sms(payload.phone, code)
+  except Exception as exc:  # noqa: BLE001
+    # Never crash login because external SMS fails; the OTP remains
+    # valid in the in-memory store and can仍然通过调试接口获取。
+    print(f"[SMS] Failed to call provider: {exc}")
   return schemas.SendCodeResponse(success=True)
 
 
 @app.post("/auth/verify-code", response_model=schemas.Token)
 def verify_code(payload: schemas.VerifyCodeRequest, db: Session = Depends(get_db)) -> schemas.Token:
-  if not verify_otp(payload.phone, payload.code):
+  local_ok = verify_otp(payload.phone, payload.code)
+
+  remote_ok = False
+  try:
+    remote_ok = verify_sms_code(payload.phone, payload.code)
+  except Exception as exc:  # noqa: BLE001
+    # 远端异常不应影响本地 OTP 逻辑，只做日志记录。
+    print(f"[SMS] verify_sms_code raised exception: {exc}")
+
+  if not (local_ok or remote_ok):
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
 
   user = db.query(User).filter(User.phone == payload.phone).first()
@@ -109,7 +126,11 @@ def debug_get_otp_store() -> dict:
 
 
 @app.get("/user/me", response_model=schemas.UserMeResponse)
-def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> schemas.UserMeResponse:
+def get_me(
+  request: Request,
+  current_user: User = Depends(get_current_user),
+  db: Session = Depends(get_db),
+) -> schemas.UserMeResponse:
   # Basic invite statistics
   total_invited = db.query(Invite).filter(Invite.inviter_user_id == current_user.id).count()
 
@@ -142,7 +163,16 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
   today_used = analyses_today_done
   today_remaining = max(today_base_quota + today_extra_quota - today_used, 0)
 
-  my_referral_url = f"{settings.base_url}/auth?ref={current_user.referral_code}"
+  # Compute public base URL:
+  # - If a non-empty base_url is configured, use it as an override.
+  # - Otherwise derive it from the incoming request (works for both
+  #   localhost during development and the real domain in production).
+  if settings.base_url:
+    base_url = settings.base_url.rstrip("/")
+  else:
+    base_url = str(request.base_url).rstrip("/")
+
+  my_referral_url = f"{base_url}/auth?ref={current_user.referral_code}"
 
   return schemas.UserMeResponse(
     user=current_user,
@@ -154,6 +184,61 @@ def get_me(current_user: User = Depends(get_current_user), db: Session = Depends
     invitedToday=invited_today,
     myReferralUrl=my_referral_url,
   )
+
+
+@app.get("/analysis/latest", response_model=schemas.LatestAnalysisResponse)
+def get_latest_analysis(
+  current_user: User = Depends(get_current_user),
+  db: Session = Depends(get_db),
+) -> schemas.LatestAnalysisResponse:
+  """
+  Return the most recent non-error analysis for the current user.
+  This is primarily used for prefilling the input form on the profile page.
+  """
+  analysis = (
+    db.query(Analysis)
+    .filter(Analysis.user_id == current_user.id)
+    .filter(Analysis.status != "error")
+    .order_by(Analysis.created_at.desc())
+    .first()
+  )
+
+  if not analysis:
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No analysis found")
+
+  return schemas.LatestAnalysisResponse(
+    id=analysis.id,
+    status=analysis.status,
+    input=analysis.input_json or {},
+    created_at=analysis.created_at,
+  )
+
+
+@app.post("/bazi/calc", response_model=schemas.BaziResult)
+def calc_bazi(
+  payload: schemas.BaziUserInput,
+  current_user: User = Depends(get_current_user),
+) -> schemas.BaziResult:
+  """
+  Pre-calculate BaZi chart and Da Yun based on basic profile input.
+
+  This mirrors the first step in the latest reference project so that
+  the /profile form can stay simple (只填生日、时间、地点)，而不需要用户自己
+  输入干支与大运。
+  """
+  try:
+    raw = calculate_bazi_from_basic_info(payload.model_dump())
+  except Exception as exc:  # noqa: BLE001
+    raise HTTPException(
+      status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+      detail=f"BaZi calculation failed: {exc}",
+    ) from exc
+
+  # Attach original user input so the front-end does not need to merge.
+  if "userInput" not in raw:
+    raw["userInput"] = payload.model_dump()
+
+  return schemas.BaziResult.model_validate(raw)
 
 
 def _run_analysis_background(analysis_id: int) -> None:
@@ -175,20 +260,11 @@ def _run_analysis_background(analysis_id: int) -> None:
       analysis.error_message = None
       analysis.completed_at = datetime.utcnow()
     except Exception as exc:  # noqa: BLE001
-      # 当调用大模型失败（超时 / 解析错误等）时，优先尝试使用根目录下的 exp.json
-      # 作为实验性示例结果，方便前端联调和端到端流程验证。
-      try:
-        root_dir = Path(__file__).resolve().parent.parent
-        exp_path = root_dir / "exp.json"
-        fallback = json.loads(exp_path.read_text(encoding="utf-8"))
-        analysis.output_json = fallback
-        analysis.status = "done"
-        analysis.error_message = f"LLM failed: {exc}; fallback to exp.json"
-        analysis.completed_at = datetime.utcnow()
-      except Exception as fallback_exc:  # noqa: BLE001
-        analysis.status = "error"
-        analysis.error_message = f"{exc} | fallback error: {fallback_exc}"
-        analysis.completed_at = datetime.utcnow()
+      # 调用大模型失败（超时 / 解析错误 / 网络问题等）时，不再使用本地 exp.json 兜底，
+      # 而是明确标记为 error，前端可以据此展示“分析失败”并引导用户重试。
+      analysis.status = "error"
+      analysis.error_message = f"{exc}"
+      analysis.completed_at = datetime.utcnow()
 
     db.commit()
   finally:

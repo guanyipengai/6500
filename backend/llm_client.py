@@ -1,7 +1,8 @@
 import json
-from typing import Tuple
+import os
+from typing import Tuple, Dict, Any
 
-import httpx
+from openai import OpenAI
 
 from .config import get_settings
 from .constants import BAZI_SYSTEM_INSTRUCTION
@@ -104,7 +105,7 @@ def build_prompts(input_data: dict) -> Tuple[str, str]:
 1. 确认格局与喜忌。
 2. 生成 **1-100 岁 (虚岁)** 的人生流年K线数据。
 3. 在 `reason` 字段中提供流年详批。
-4. 生成带评分的命理分析报告（包含性格分析、币圈交易分析、发展风水分析）。
+4. 生成带评分的命理分析报告（包含性格分析、星座运势分析、发展风水分析）。
 
 请严格按照系统指令生成 JSON 数据。
 """.strip()
@@ -116,15 +117,101 @@ def build_prompts(input_data: dict) -> Tuple[str, str]:
   return system_prompt, user_prompt
 
 
+def calculate_bazi_from_basic_info(user_input: Dict[str, Any]) -> Dict[str, Any]:
+  """
+  Use the LLM to calculate BaZi chart and Da Yun information based on
+  basic profile input (birth date, time, location, gender).
+
+  The expected structure of user_input is aligned with BaziUserInput in
+  backend.schemas:
+    - name (optional)
+    - gender: "Male" | "Female"
+    - birthDate: "YYYY-MM-DD"
+    - birthTime: "HH:MM"
+    - birthLocation: free-text location string
+
+  Returns a dict matching backend.schemas.BaziResult (but as plain dict).
+  """
+  birth_date = user_input.get("birthDate")
+  birth_time = user_input.get("birthTime")
+  birth_location = user_input.get("birthLocation")
+  gender = user_input.get("gender") or "Male"
+
+  if not birth_date or not birth_time or not birth_location:
+    raise ValueError("birthDate, birthTime and birthLocation are required for BaZi calculation")
+
+  system_prompt = (
+    "You are an expert in Traditional Chinese BaZi (Four Pillars). "
+    "You will calculate the BaZi chart and Da Yun based on the user's "
+    "birth information. "
+    "Return ONLY valid JSON, without any markdown code fences or extra text."
+  )
+
+  schema_hint = """
+Return ONLY valid JSON matching this exact schema (no markdown, no code blocks):
+{
+  "solarTime": "string - Calculated True Solar Time in HH:mm format",
+  "lunarDate": "string - Lunar Date representation (e.g., '1990年腊月初五')",
+  "bazi": {
+    "year": { "gan": "string", "zhi": "string" },
+    "month": { "gan": "string", "zhi": "string" },
+    "day": { "gan": "string", "zhi": "string" },
+    "hour": { "gan": "string", "zhi": "string" }
+  },
+  "startAge": "integer - The age when the first Big Luck cycle starts",
+  "direction": "string - Forward or Backward based on Gender and Year Stem",
+  "daYun": ["array of strings - List of the first 8-10 Big Luck Pillars (GanZhi) e.g. ['甲子', '乙丑']"]
+}
+""".strip()
+
+  user_prompt = f"""
+Calculate the BaZi chart for:
+Date: {birth_date}
+Clock Time: {birth_time}
+Location: {birth_location} (Use this to calculate True Solar Time deviation from UTC/Standard time)
+Gender: {gender}
+
+1. Calculate True Solar Time (真太阳时).
+2. Convert the date to Chinese Lunar Date (农历).
+3. Arrange the Year, Month, Day, and Hour pillars accurately based on Solar Time.
+4. Calculate the Start Age (起运岁数) and Direction (Forward/Backward).
+5. List the first 10 Big Luck (Da Yun) pillars.
+
+{schema_hint}
+""".strip()
+
+  # Lightweight demo mode: when api_key is set to "demo", skip real HTTP calls
+  # and return a small but structurally valid payload so that the front-end can
+  # exercise the flow without hitting the real LLM.
+  if settings.llm_api_key == "demo":
+    demo = {
+      "solarTime": "06:00",
+      "lunarDate": "一九九零年正月初一",
+      "bazi": {
+        "year": {"gan": "庚", "zhi": "午"},
+        "month": {"gan": "甲", "zhi": "子"},
+        "day": {"gan": "丙", "zhi": "辰"},
+        "hour": {"gan": "壬", "zhi": "寅"},
+      },
+      "startAge": 8,
+      "direction": "Forward",
+      "daYun": ["丙子", "丁丑", "戊寅", "己卯", "庚辰", "辛巳", "壬午", "癸未"],
+    }
+    return demo
+  content = call_llm(system_prompt, user_prompt)
+  return extract_json_from_content(content)
+
+
 def call_llm(system_prompt: str, user_prompt: str) -> str:
   """
-  Call the SiliconFlow chat completions API and return the assistant content text.
+  Call the configured Doubao/Ark chat completions API (OpenAI-compatible)
+  and return the assistant content text.
 
   The returned content is expected (but not guaranteed) to be a JSON string.
   """
-  api_key = getattr(settings, "llm_api_key", None)
-  api_base = getattr(settings, "llm_api_base", None) or "https://api.siliconflow.cn/v1/chat/completions"
-  model = getattr(settings, "llm_model", None) or "Qwen/Qwen3-30B-A3B-Instruct-2507"
+  api_key = getattr(settings, "llm_api_key", None) or os.getenv("ARK_API_KEY")
+  api_base = getattr(settings, "llm_api_base", None) or "https://ark.cn-beijing.volces.com/api/v3"
+  model = getattr(settings, "llm_model", None) or "doubao-seed-1-6-251015"
 
   # Lightweight demo mode: when api_key is set to "demo", skip real HTTP calls
   # and return a small but structurally valid JSON payload.
@@ -178,50 +265,61 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
     return json.dumps(demo_payload, ensure_ascii=False)
 
   if not api_key:
-    raise RuntimeError("LLM API key is not configured (APP_LLM_API_KEY).")
+    raise RuntimeError(
+      "LLM API key is not configured (APP_LLM_API_KEY or ARK_API_KEY)."
+    )
 
-  payload = {
+  client = OpenAI(
+    api_key=api_key,
+    base_url=api_base,
+  )
+
+  # Doubao / 其他 OpenAI 兼容服务：优先尝试 response_format=json_object，
+  # 如果后端不支持该参数（部分第三方实现会报错），则自动降级为普通文本响应。
+  common_kwargs = {
     "model": model,
     "messages": [
       {"role": "system", "content": system_prompt},
       {"role": "user", "content": user_prompt},
     ],
-    "stream": False,
-    "max_tokens": 8192,
     "temperature": 0.7,
-    "top_p": 0.7,
-    "top_k": 50,
-    "frequency_penalty": 0.5,
-    "n": 1,
-    "response_format": {"type": "text"},
+    "max_tokens": 8192,
   }
 
-  headers = {
-    "Authorization": f"Bearer {api_key}",
-    "Content-Type": "application/json",
-  }
+  try:
+    completion = client.chat.completions.create(
+      **common_kwargs,
+      response_format={"type": "json_object"},
+    )
+  except Exception as exc:  # noqa: BLE001
+    message = str(exc)
+    # 仅当错误看起来与 response_format / JSON 相关时才做兜底重试，
+    # 其他错误直接抛出，避免吞掉真实问题。
+    if "response_format" in message or "json_object" in message:
+      completion = client.chat.completions.create(**common_kwargs)
+    else:
+      raise
 
-  # SiliconFlow 在生成 100 年 K 线 + 全量分析时，响应时间可能超过 1 分钟，
-  # 将超时时间适当调大，避免正常请求被过早中断。
-  # Allow long-running generations for the full 100 年 K 线 + 文本分析。
-  # 连接和写入相对较短，只把整体读取窗口放宽到 4 分钟。
-  timeout = httpx.Timeout(240.0, connect=20.0, read=220.0, write=20.0)
+  message = completion.choices[0].message
+  content = message.content
 
-  with httpx.Client(timeout=timeout) as client:
-    resp = client.post(api_base, headers=headers, json=payload)
-    resp.raise_for_status()
-    data = resp.json()
+  # openai>=1.* 可能返回 str 或 content-part 列表，这里统一成 str
+  if isinstance(content, list):
+    # 拼接所有 text 段
+    parts = []
+    for part in content:
+      # part 可能是 ChatCompletionMessageContentPartText 等对象
+      text = getattr(part, "text", None)
+      if isinstance(text, str):
+        parts.append(text)
+    content_str = "".join(parts)
+  else:
+    content_str = content
 
-  choices = data.get("choices") or []
-  if not choices:
-    raise RuntimeError("LLM response missing choices.")
-
-  message = choices[0].get("message") or {}
-  content = message.get("content")
-  if not isinstance(content, str):
+  if not isinstance(content_str, str):
     raise RuntimeError("LLM response content is not a string.")
 
-  return content
+  return content_str
 
 
 def extract_json_from_content(content: str) -> dict:

@@ -8,6 +8,42 @@ export interface AnalysisInput {
   hour_pillar: string;
   start_age: number;
   first_da_yun: string;
+  // Optional original birth info, kept for history/prefill.
+  birthDate?: string;
+  birthTime?: string;
+  birthLocation?: string;
+}
+
+// 原始出生信息（对齐 reference/lifeline-k--main 的 InputForm）
+export interface BasicProfileInput {
+  name?: string;
+  gender: "Male" | "Female";
+  birthDate: string;      // YYYY-MM-DD
+  birthTime: string;      // HH:mm
+  birthLocation: string;  // free-text city / place
+}
+
+export interface BaziPillar {
+  gan: string;
+  zhi: string;
+  element?: string;
+}
+
+export interface BaziChart {
+  year: BaziPillar;
+  month: BaziPillar;
+  day: BaziPillar;
+  hour: BaziPillar;
+}
+
+export interface BaziResult {
+  userInput: BasicProfileInput;
+  solarTime: string;
+  lunarDate: string;
+  bazi: BaziChart;
+  startAge: number;
+  direction: string; // "Forward" | "Backward"
+  daYun: string[];
 }
 
 export interface KLinePoint {

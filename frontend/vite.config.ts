@@ -6,9 +6,11 @@ export default defineConfig({
   server: {
     port: 5173
   },
+  // Static assets (fonts, QR code) are served from `frontend/public`
+  // and are available as /title.ttf, /content.ttf, /qrcode.jpg, etc.
+  publicDir: "public",
   build: {
     outDir: "dist",
     sourcemap: false
   }
 });
-
