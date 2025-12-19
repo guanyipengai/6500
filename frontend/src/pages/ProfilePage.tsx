@@ -13,7 +13,7 @@ export const ProfilePage: React.FC = () => {
 
   const [form, setForm] = useState<BasicProfileInput>({
     name: "",
-    gender: "Male",
+    gender: "Female",
     birthDate: "1990-01-01",
     birthTime: "06:00",
     birthLocation: ""
@@ -57,7 +57,6 @@ export const ProfilePage: React.FC = () => {
             setForm(prev => ({
               ...prev,
               name: latest.input.name || prev.name,
-              gender: latest.input.gender || prev.gender,
               birthDate:
                 latest.input.birthDate ||
                 prev.birthDate ||
@@ -542,7 +541,14 @@ export const ProfilePage: React.FC = () => {
                     "0px 10px 15px -3px rgba(0,0,0,0.1), 0px 4px 6px -4px rgba(0,0,0,0.1)"
                 }}
               >
-                {submitting ? "AI 正在排盘，请稍候..." : "开始排盘"}
+                {submitting ? (
+                  "AI 正在排盘，请稍候..."
+                ) : (
+                  <>
+                    <span style={{ marginRight: 4 }}>✨</span>
+                    开始排盘
+                  </>
+                )}
               </button>
               <p
                 style={{

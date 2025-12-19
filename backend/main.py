@@ -175,14 +175,14 @@ def get_me(
     .count()
   )
 
-  today_base_quota = 5
+  today_base_quota = 3
 
   # Extra quota based on successful invites:
-  # every 5 successful invites grants +1 extra, capped at +10 per day.
+  # every 5 successful invites grants +1 extra, capped at +5 per day.
   # For now we use totalInvited as a simple approximation; later we can
   # refine this to use "completed analyses of invited users".
   extra_by_invites = total_invited // 5
-  today_extra_quota = min(extra_by_invites, 10)
+  today_extra_quota = min(extra_by_invites, 5)
 
   # Count today's completed analyses
   analyses_today_done = (
