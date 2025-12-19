@@ -16,6 +16,7 @@ from .db import Base, engine, get_db, SessionLocal
 from .models import User, Invite, Analysis
 from .llm_client import call_llm, build_prompts, extract_json_from_content, calculate_bazi_from_basic_info
 from .sms_client import send_verification_code_sms, verify_sms_code
+from .invite_codes import get_initial_invite_codes
 
 settings = get_settings()
 
@@ -77,10 +78,38 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session = Depends(get_db
   user = db.query(User).filter(User.phone == payload.phone).first()
   is_new_user = False
 
+   # 统一整理 inviter code，方便后续校验。
+  inviter_code: Optional[str] = None
+  if payload.inviterCode:
+    inviter_code = payload.inviterCode.strip()
+    if inviter_code == "":
+      inviter_code = None
+
+  # 新用户注册必须提供合法邀请码：
+  # - 要么是初始邀请码池中的 code；
+  # - 要么是某个已存在用户的 referral_code。
   if not user:
+    if not inviter_code:
+      raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="邀请码不能为空，请通过专属渠道获取",
+      )
+
+    # 先看是否是已有用户的邀请码
+    inviter_user = db.query(User).filter(User.referral_code == inviter_code).first()
+    # 再看是否在初始邀请码池中
+    initial_codes = get_initial_invite_codes()
+    is_initial_code = inviter_code.upper() in initial_codes
+
+    if not inviter_user and not is_initial_code:
+      raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="邀请码无效，请确认后再试",
+      )
+
+    # 通过校验后，创建新用户
     is_new_user = True
     referral_code = _generate_unique_referral_code(db)
-    inviter_code: Optional[str] = payload.inviterCode
 
     user = User(
       phone=payload.phone,
@@ -92,13 +121,13 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session = Depends(get_db
     db.add(user)
     db.flush()  # Ensure user.id is available
 
-    # Record successful invite if inviter_code is valid
-    if inviter_code:
-      inviter = db.query(User).filter(User.referral_code == inviter_code).first()
-      if inviter and inviter.id != user.id:
-        invite = Invite(inviter_user_id=inviter.id, invited_user_id=user.id, created_at=datetime.utcnow())
-        db.add(invite)
+    # 只有“用户邀请码邀请用户”才计入 Invite 统计；
+    # 使用初始邀请码池注册的用户不会增加某个具体用户的邀请数。
+    if inviter_user and inviter_user.id != user.id:
+      invite = Invite(inviter_user_id=inviter_user.id, invited_user_id=user.id, created_at=datetime.utcnow())
+      db.add(invite)
   else:
+    # 老用户登录时忽略 inviterCode，只更新最近登录时间。
     user.last_login_at = datetime.utcnow()
 
   db.commit()

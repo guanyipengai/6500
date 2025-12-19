@@ -6,6 +6,7 @@ from backend.main import app, Base, engine
 from backend.auth import get_otp_store_snapshot
 from backend.models import User, Invite
 from backend.db import SessionLocal
+from backend.invite_codes import get_initial_invite_codes
 
 
 client = TestClient(app)
@@ -25,6 +26,11 @@ def test_signup_and_invite_flow() -> None:
   phone_inviter = "13800000001"
   phone_invited = "13800000002"
 
+  # 选取一枚初始邀请码，模拟“平台分发给首批用户”的场景。
+  initial_codes = sorted(get_initial_invite_codes())
+  assert initial_codes, "initial invite code pool should not be empty in tests"
+  seed_code = initial_codes[0]
+
   # Step 1: inviter sends code and signs up
   resp = client.post("/auth/send-code", json={"phone": phone_inviter})
   assert resp.status_code == 200
@@ -36,6 +42,7 @@ def test_signup_and_invite_flow() -> None:
     json={
       "phone": phone_inviter,
       "code": code_inviter,
+      "inviterCode": seed_code,
     },
   )
   assert resp.status_code == 200

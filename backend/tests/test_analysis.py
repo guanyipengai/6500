@@ -5,6 +5,7 @@ from backend.main import app, Base, engine
 from backend.auth import get_otp_store_snapshot
 from backend.models import Analysis
 from backend.db import SessionLocal
+from backend.invite_codes import get_initial_invite_codes
 
 
 client = TestClient(app)
@@ -17,12 +18,24 @@ def setup_module() -> None:
 
 
 def _signup_user(phone: str):
+  # 选取一枚初始邀请码，模拟新用户通过“官方渠道邀请码”完成首次注册。
+  initial_codes = sorted(get_initial_invite_codes())
+  assert initial_codes, "initial invite code pool should not be empty in tests"
+  seed_code = initial_codes[0]
+
   resp = client.post("/auth/send-code", json={"phone": phone})
   assert resp.status_code == 200
   otp_store = get_otp_store_snapshot()
   code, _ = otp_store[phone]
 
-  resp = client.post("/auth/verify-code", json={"phone": phone, "code": code})
+  resp = client.post(
+    "/auth/verify-code",
+    json={
+      "phone": phone,
+      "code": code,
+      "inviterCode": seed_code,
+    },
+  )
   assert resp.status_code == 200
   token = resp.json()["access_token"]
   return token
