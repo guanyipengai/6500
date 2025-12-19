@@ -7,8 +7,14 @@ from openai import OpenAI
 from .config import get_settings
 from .constants import BAZI_SYSTEM_INSTRUCTION
 
-
 settings = get_settings()
+
+try:
+  # 用于精确的公历 -> 农历转换，避免完全依赖大模型。
+  from chinese_lunar_calendar_converter import solar_to_lunar  # type: ignore[import]
+except Exception as exc:  # noqa: BLE001
+  print(f"[BaZi] chinese_lunar_calendar_converter not available: {exc}")
+  solar_to_lunar = None  # type: ignore[assignment]
 
 
 YANG_STEMS = ["甲", "丙", "戊", "庚", "壬"]
@@ -199,7 +205,20 @@ Gender: {gender}
     }
     return demo
   content = call_llm(system_prompt, user_prompt)
-  return extract_json_from_content(content)
+  data = extract_json_from_content(content)
+
+  # 使用本地算法覆写 lunarDate，保证农历年月日准确。
+  if solar_to_lunar is not None:
+    try:
+      lunar_info = solar_to_lunar(birth_date)
+      # lunar_info 示例: (甲辰年, 丁丑月, 戊戌日, 正月, 初一)
+      lunar_year_gz, _lunar_month_gz, _lunar_day_gz, lunar_month, lunar_day = lunar_info
+      data["lunarDate"] = f"{lunar_year_gz} {lunar_month}{lunar_day}"
+    except Exception as exc:  # noqa: BLE001
+      # 本地转换失败时不阻断流程，保留大模型原始结果。
+      print(f"[BaZi] local lunar conversion failed for {birth_date}: {exc}")
+
+  return data
 
 
 def call_llm(system_prompt: str, user_prompt: str) -> str:
