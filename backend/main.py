@@ -38,11 +38,13 @@ def _generate_unique_referral_code(db: Session) -> str:
   import string
 
   alphabet = string.ascii_uppercase + string.digits
+  initial_codes = {code.upper() for code in get_initial_invite_codes()}
 
   while True:
     code = "".join(secrets.choice(alphabet) for _ in range(6))
     existing = db.query(User).filter(User.referral_code == code).first()
-    if not existing:
+    # 确保不会与现有用户的邀请码或初始邀请码池发生冲突。
+    if not existing and code.upper() not in initial_codes:
       return code
 
 
