@@ -300,7 +300,7 @@ export const ResultPage: React.FC = () => {
               color: "#4b5563"
             }}
           >
-            洞见人生牛市 · 命运有其波动
+            命运有其波动 · 洞见人生牛市
           </p>
         </header>
 
