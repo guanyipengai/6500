@@ -190,7 +190,7 @@ export const ProfilePage: React.FC = () => {
             position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-start"
+            justifyContent: "center"
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -272,7 +272,10 @@ export const ProfilePage: React.FC = () => {
             type="button"
             onClick={() => setShowMenu(prev => !prev)}
             style={{
-              marginLeft: "auto",
+              position: "absolute",
+              right: 16,
+              top: "50%",
+              transform: "translateY(-50%)",
               width: 32,
               height: 32,
               border: "none",
@@ -305,30 +308,41 @@ export const ProfilePage: React.FC = () => {
           gap: 24
         }}
       >
-        {/* 顶部品牌 + 标语，贴合 input 页设计 */}
-        <section style={{ textAlign: "center" }}>
+        {/* 顶部品牌 + 标语，与 Auth 页保持一致 */}
+        <section
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            maxWidth: 320,
+            paddingTop: 8,
+            margin: "0 auto"
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 8,
+              color: "#111827",
+              fontSize: 28,
+              lineHeight: "34px"
+            }}
+          >
+            命运有其波动
+          </div>
           <div
             style={{
               marginBottom: 8,
               color: "#ff3164",
               fontSize: 28,
-              lineHeight: "34px"
+              lineHeight: "26px"
             }}
           >
             洞见人生牛市
           </div>
-          <div
-            style={{
-              marginBottom: 8,
-              color: "#111827",
-              fontSize: 20,
-              lineHeight: "26px"
-            }}
-          >
-            命运有其波动
-          </div>
           <p
             style={{
+              marginTop: 12,
               color: "#4b5563",
               fontSize: 14,
               lineHeight: "20px"
