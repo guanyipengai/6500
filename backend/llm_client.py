@@ -283,7 +283,7 @@ def call_llm(system_prompt: str, user_prompt: str) -> str:
       {"role": "user", "content": user_prompt},
     ],
     "temperature": 0.7,
-    "max_tokens": 8192,
+    "max_tokens": getattr(settings, "llm_max_tokens", 8192),
   }
 
   try:

@@ -32,6 +32,9 @@ class Settings:
   llm_api_base: str = "https://ark.cn-beijing.volces.com/api/v3"
   llm_api_key: str = ""
   llm_model: str = "doubao-seed-1-6-251015"
+  # 最大生成 token 数，控制大模型一次回答的长度。
+  # 可以通过 backend/local-config.json 或 APP_LLM_MAX_TOKENS 覆盖。
+  llm_max_tokens: int = 8192
 
   # SMS configuration (Alibaba Cloud Dypnsapi)
   # When sms_sign_name and sms_template_code are non-empty and the
@@ -78,6 +81,7 @@ def _apply_local_config(settings: Settings) -> None:
     "llm_api_key",
     "llm_api_base",
     "llm_model",
+    "llm_max_tokens",
     "base_url",
     "sms_access_key_id",
     "sms_access_key_secret",
@@ -86,7 +90,15 @@ def _apply_local_config(settings: Settings) -> None:
     "sms_template_param_template",
   ):
     if field in data and data[field]:
-      setattr(settings, field, str(data[field]))
+      value = data[field]
+      if field == "llm_max_tokens":
+        try:
+          settings.llm_max_tokens = int(value)
+        except (TypeError, ValueError):
+          # 非法值时忽略，保留默认 8192
+          pass
+      else:
+        setattr(settings, field, str(value))
 
 
 def _apply_env_overrides(settings: Settings) -> None:
@@ -102,6 +114,7 @@ def _apply_env_overrides(settings: Settings) -> None:
     "llm_api_base": "APP_LLM_API_BASE",
     "llm_api_key": "APP_LLM_API_KEY",
     "llm_model": "APP_LLM_MODEL",
+    "llm_max_tokens": "APP_LLM_MAX_TOKENS",
     "sms_access_key_id": "APP_SMS_ACCESS_KEY_ID",
     "sms_access_key_secret": "APP_SMS_ACCESS_KEY_SECRET",
     "sms_sign_name": "APP_SMS_SIGN_NAME",
@@ -113,7 +126,7 @@ def _apply_env_overrides(settings: Settings) -> None:
     value = os.getenv(env_name)
     if value is None or value == "":
       continue
-    if attr == "access_token_expires_minutes":
+    if attr in ("access_token_expires_minutes", "llm_max_tokens"):
       try:
         setattr(settings, attr, int(value))
       except ValueError:
