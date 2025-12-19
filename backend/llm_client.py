@@ -11,9 +11,10 @@ settings = get_settings()
 
 try:
   # 用于精确的公历 -> 农历转换，避免完全依赖大模型。
-  from chinese_lunar_calendar_converter import solar_to_lunar  # type: ignore[import]
+  # 包名是 chinese-lunar-calendar-converter，但实际导入模块为 lunar_calendar。
+  from lunar_calendar import solar_to_lunar  # type: ignore[import]
 except Exception as exc:  # noqa: BLE001
-  print(f"[BaZi] chinese_lunar_calendar_converter not available: {exc}")
+  print(f"[BaZi] lunar_calendar not available: {exc}")
   solar_to_lunar = None  # type: ignore[assignment]
 
 
@@ -211,9 +212,10 @@ Gender: {gender}
   if solar_to_lunar is not None:
     try:
       lunar_info = solar_to_lunar(birth_date)
-      # lunar_info 示例: (甲辰年, 丁丑月, 戊戌日, 正月, 初一)
+      # lunar_info 示例: ('甲辰', '丁丑', '戊戌', '正月', '初一')
       lunar_year_gz, _lunar_month_gz, _lunar_day_gz, lunar_month, lunar_day = lunar_info
-      data["lunarDate"] = f"{lunar_year_gz} {lunar_month}{lunar_day}"
+      # 展示为：甲辰年 正月初一
+      data["lunarDate"] = f"{lunar_year_gz}年 {lunar_month}{lunar_day}"
     except Exception as exc:  # noqa: BLE001
       # 本地转换失败时不阻断流程，保留大模型原始结果。
       print(f"[BaZi] local lunar conversion failed for {birth_date}: {exc}")
