@@ -1,10 +1,16 @@
 import type { AnalysisInput, BasicProfileInput, BaziResult } from "./types";
 
+// 开发环境（Vite dev server）默认连本地后端 8000，
+// 生产环境（打包后）默认使用当前 origin。
+const isDev = import.meta.env.DEV;
+
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== "undefined" && window.location.origin
-    ? window.location.origin
-    : "http://localhost:8000");
+  (isDev
+    ? "http://localhost:8000"
+    : (typeof window !== "undefined" && window.location.origin
+        ? window.location.origin
+        : "http://localhost:8000"));
 
 export interface TokenResponse {
   access_token: string;

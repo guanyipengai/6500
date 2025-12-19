@@ -83,7 +83,7 @@ export const AuthPage: React.FC = () => {
             position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-start"
+            justifyContent: "center"
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -137,31 +137,33 @@ export const AuthPage: React.FC = () => {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            maxWidth: 320
+            maxWidth: 320,
+            paddingTop: 8
           }}
         >
           <div
             style={{
               marginBottom: 8,
-              color: "#ff3164",
+              color: "#111827",
               fontSize: 28,
               lineHeight: "34px"
             }}
           >
-            洞见人生牛市
+            命运有其波动
           </div>
           <div
             style={{
               marginBottom: 8,
-              color: "#111827",
-              fontSize: 20,
+              color: "#ff3164",
+              fontSize: 28,
               lineHeight: "26px"
             }}
           >
-            命运有其波动
+            洞见人生牛市
           </div>
           <p
             style={{
+              marginTop: 12,
               color: "#4b5563",
               fontSize: 14,
               lineHeight: "20px"
