@@ -106,10 +106,17 @@ export const BaziPreviewPage: React.FC = () => {
             position: "relative",
             display: "flex",
             alignItems: "center",
-            justifyContent: "flex-start"
+            justifyContent: "center"
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              margin: "0 auto"
+            }}
+          >
             <img
               src={logo}
               alt="人生牛市 Logo"
@@ -188,7 +195,10 @@ export const BaziPreviewPage: React.FC = () => {
             type="button"
             onClick={() => setShowMenu(prev => !prev)}
             style={{
-              marginLeft: "auto",
+              position: "absolute",
+              right: 16,
+              top: "50%",
+              transform: "translateY(-50%)",
               width: 32,
               height: 32,
               border: "none",
