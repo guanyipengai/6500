@@ -6,16 +6,9 @@ from openai import OpenAI
 
 from .config import get_settings
 from .constants import BAZI_SYSTEM_INSTRUCTION
+from .bazi_algo import calculate_bazi_from_basic_profile
 
 settings = get_settings()
-
-try:
-  # 用于精确的公历 -> 农历转换，避免完全依赖大模型。
-  # 包名是 chinese-lunar-calendar-converter，但实际导入模块为 lunar_calendar。
-  from lunar_calendar import solar_to_lunar  # type: ignore[import]
-except Exception as exc:  # noqa: BLE001
-  print(f"[BaZi] lunar_calendar not available: {exc}")
-  solar_to_lunar = None  # type: ignore[assignment]
 
 
 YANG_STEMS = ["甲", "丙", "戊", "庚", "壬"]
@@ -126,101 +119,20 @@ def build_prompts(input_data: dict) -> Tuple[str, str]:
 
 def calculate_bazi_from_basic_info(user_input: Dict[str, Any]) -> Dict[str, Any]:
   """
-  Use the LLM to calculate BaZi chart and Da Yun information based on
-  basic profile input (birth date, time, location, gender).
+  Deterministically calculate BaZi chart and Da Yun information based on
+  basic profile input (birth date, time, location, gender), using the
+  legacy algorithm from backend/bazi-master instead of调用大模型。
 
-  The expected structure of user_input is aligned with BaziUserInput in
-  backend.schemas:
+  输入结构与 backend.schemas.BaziUserInput 对齐：
     - name (optional)
     - gender: "Male" | "Female"
     - birthDate: "YYYY-MM-DD"
     - birthTime: "HH:MM"
     - birthLocation: free-text location string
 
-  Returns a dict matching backend.schemas.BaziResult (but as plain dict).
+  返回值结构与 backend.schemas.BaziResult 对齐（普通 dict）。
   """
-  birth_date = user_input.get("birthDate")
-  birth_time = user_input.get("birthTime")
-  birth_location = user_input.get("birthLocation")
-  gender = user_input.get("gender") or "Male"
-
-  if not birth_date or not birth_time or not birth_location:
-    raise ValueError("birthDate, birthTime and birthLocation are required for BaZi calculation")
-
-  system_prompt = (
-    "You are an expert in Traditional Chinese BaZi (Four Pillars). "
-    "You will calculate the BaZi chart and Da Yun based on the user's "
-    "birth information. "
-    "Return ONLY valid JSON, without any markdown code fences or extra text."
-  )
-
-  schema_hint = """
-Return ONLY valid JSON matching this exact schema (no markdown, no code blocks):
-{
-  "solarTime": "string - Calculated True Solar Time in HH:mm format",
-  "lunarDate": "string - Lunar Date representation (e.g., '1990年腊月初五')",
-  "bazi": {
-    "year": { "gan": "string", "zhi": "string" },
-    "month": { "gan": "string", "zhi": "string" },
-    "day": { "gan": "string", "zhi": "string" },
-    "hour": { "gan": "string", "zhi": "string" }
-  },
-  "startAge": "integer - The age when the first Big Luck cycle starts",
-  "direction": "string - Forward or Backward based on Gender and Year Stem",
-  "daYun": ["array of strings - List of the first 8-10 Big Luck Pillars (GanZhi) e.g. ['甲子', '乙丑']"]
-}
-""".strip()
-
-  user_prompt = f"""
-Calculate the BaZi chart for:
-Date: {birth_date}
-Clock Time: {birth_time}
-Location: {birth_location} (Use this to calculate True Solar Time deviation from UTC/Standard time)
-Gender: {gender}
-
-1. Calculate True Solar Time (真太阳时).
-2. Convert the date to Chinese Lunar Date (农历).
-3. Arrange the Year, Month, Day, and Hour pillars accurately based on Solar Time.
-4. Calculate the Start Age (起运岁数) and Direction (Forward/Backward).
-5. List the first 10 Big Luck (Da Yun) pillars.
-
-{schema_hint}
-""".strip()
-
-  # Lightweight demo mode: when api_key is set to "demo", skip real HTTP calls
-  # and return a small but structurally valid payload so that the front-end can
-  # exercise the flow without hitting the real LLM.
-  if settings.llm_api_key == "demo":
-    demo = {
-      "solarTime": "06:00",
-      "lunarDate": "一九九零年正月初一",
-      "bazi": {
-        "year": {"gan": "庚", "zhi": "午"},
-        "month": {"gan": "甲", "zhi": "子"},
-        "day": {"gan": "丙", "zhi": "辰"},
-        "hour": {"gan": "壬", "zhi": "寅"},
-      },
-      "startAge": 8,
-      "direction": "Forward",
-      "daYun": ["丙子", "丁丑", "戊寅", "己卯", "庚辰", "辛巳", "壬午", "癸未"],
-    }
-    return demo
-  content = call_llm(system_prompt, user_prompt)
-  data = extract_json_from_content(content)
-
-  # 使用本地算法覆写 lunarDate，保证农历年月日准确。
-  if solar_to_lunar is not None:
-    try:
-      lunar_info = solar_to_lunar(birth_date)
-      # lunar_info 示例: ('甲辰', '丁丑', '戊戌', '正月', '初一')
-      lunar_year_gz, _lunar_month_gz, _lunar_day_gz, lunar_month, lunar_day = lunar_info
-      # 展示为：甲辰年 正月初一
-      data["lunarDate"] = f"{lunar_year_gz}年 {lunar_month}{lunar_day}"
-    except Exception as exc:  # noqa: BLE001
-      # 本地转换失败时不阻断流程，保留大模型原始结果。
-      print(f"[BaZi] local lunar conversion failed for {birth_date}: {exc}")
-
-  return data
+  return calculate_bazi_from_basic_profile(user_input)
 
 
 def call_llm(system_prompt: str, user_prompt: str) -> str:
