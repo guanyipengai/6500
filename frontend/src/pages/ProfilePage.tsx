@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { calculateBazi, createAnalysis, getMe, getLatestAnalysis } from "../api";
+import { calculateBazi, createAnalysis, getMe } from "../api";
 import { useAuthToken } from "../hooks";
 import type { AnalysisInput, BasicProfileInput, BaziResult } from "../types";
 import logo from "../assets/logo.svg";
@@ -14,8 +14,8 @@ export const ProfilePage: React.FC = () => {
   const [form, setForm] = useState<BasicProfileInput>({
     name: "",
     gender: "Female",
-    birthDate: "1990-01-01",
-    birthTime: "06:00",
+    birthDate: "",
+    birthTime: "",
     birthLocation: ""
   });
 
@@ -31,8 +31,8 @@ export const ProfilePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copyHint, setCopyHint] = useState<string | null>(null);
-  const [displayName, setDisplayName] = useState("未知用户");
   const [showMenu, setShowMenu] = useState(false);
+  const displayName = form.name && form.name.trim() ? form.name.trim() : "未知用户";
 
   useEffect(() => {
     if (!token) {
@@ -51,23 +51,6 @@ export const ProfilePage: React.FC = () => {
           totalInvited: me.totalInvited,
           invitedToday: me.invitedToday
         });
-        try {
-          const latest = await getLatestAnalysis(token);
-          if (latest && latest.input) {
-            setForm(prev => ({
-              ...prev,
-              name: latest.input.name || prev.name,
-              birthDate:
-                latest.input.birthDate ||
-                prev.birthDate ||
-                (latest.input.birth_year ? `${latest.input.birth_year}-01-01` : prev.birthDate),
-              birthTime: latest.input.birthTime || prev.birthTime,
-              birthLocation: latest.input.birthLocation || prev.birthLocation
-            }));
-          }
-        } catch (err) {
-          console.error("getLatestAnalysis failed", err);
-        }
       } catch (e: any) {
         console.error(e);
       } finally {
@@ -76,22 +59,6 @@ export const ProfilePage: React.FC = () => {
     };
     fetchInitial();
   }, [token, navigate]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem("life_bull_display_name");
-    if (stored && stored.trim()) {
-      setDisplayName(stored);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (form.name && form.name.trim()) {
-      window.localStorage.setItem("life_bull_display_name", form.name.trim());
-      setDisplayName(form.name.trim());
-    }
-  }, [form.name]);
 
   const handleChange = (key: keyof BasicProfileInput, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
